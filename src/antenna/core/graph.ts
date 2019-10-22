@@ -1,27 +1,36 @@
 import { UnitSize } from "./unit-size";
-import {GraphElement} from "./graph-element";
-import {GRAPH_DEFAULT_XDOMAIN, GRAPH_DEFAULT_YDOMAIN, SVG_NAMESPACE} from "./constant";
+import {GraphFillableElement} from "./graph-fillable-element";
+import {
+    GRAPH_DEFAULT_HEIGHT,
+    GRAPH_DEFAULT_ORIGIN, GRAPH_DEFAULT_UNIT_SIZE_X, GRAPH_DEFAULT_UNIT_SIZE_Y,
+    GRAPH_DEFAULT_WIDTH,
+    SVG_NAMESPACE
+} from "./constant";
 import {Figure} from "./figure";
-import {Axis} from "./axis";
+import {Axis} from "./axis/axis";
 import {GraphFunction} from "./graphFunction";
-import {Coordinate2D} from "./coordinates";
+import {Point2D} from "./coordinates";
+import {CoordinateHelpers} from "./coordinate-helpers";
+import {Marker} from "./marker";
 
-export class Graph extends GraphElement<SVGElement>{
+export class Graph extends GraphFillableElement<SVGElement>{
 
     constructor(private _figure: Figure) {
         super(_figure);
-        this.ydomain = GRAPH_DEFAULT_XDOMAIN;
-        this.xdomain = GRAPH_DEFAULT_YDOMAIN;
-        this.element.classList.add("graph")
+        this.xUnitSize = GRAPH_DEFAULT_UNIT_SIZE_X;
+        this.yUnitSize = GRAPH_DEFAULT_UNIT_SIZE_Y;
+        this.element.classList.add("graph");
+
+        this.xDomain= [-5, 5];
+        this.yDomain = [-5, 5];
+
+        this.addXAxis();
+        this.addYAxis();
     }
-    /**
-     * The left origin of a graph.
-     */
-    private _xdomain: [number, number] = [0, 5];
 
-    private _ydomain: [number, number] = [0, 5];
 
-    private _origin: Coordinate2D = {x: 0, y: 0};
+    private _landmark: Point2D = GRAPH_DEFAULT_ORIGIN;
+
 
     private _left: number;
     private _top: number;
@@ -42,64 +51,90 @@ export class Graph extends GraphElement<SVGElement>{
 
     private _xUnitSize = UnitSize.emUnitSize;
     private _yUnitSize = new UnitSize(100);
+    private _xDomain: Point2D = [0, 0];
+    private _yDomain:  Point2D = [0, 0];
+    private _origin: Point2D = [0, 0];
+
+    addXAxis(){
+        this._xAxis = new Axis(this, this.xUnitSize);
+        this._xAxis.start = [this.xDomain[0], 0];
+        this._xAxis.end = [this.xDomain[1], 0];
+    }
+
+    addYAxis() {
+        this._yAxis = new Axis(this, this.yUnitSize);
+        this._yAxis.start = [0, this.yDomain[1]];
+        this._yAxis.end = [0, this.yDomain[0]];
+    }
+
+    addLeftAxis() {
+        this._leftAxis = new Axis(this, this.yUnitSize);
+        this._leftAxis.start = [this.xDomain[0], this.yDomain[1]];
+        this._leftAxis.end = [this.xDomain[0], this.yDomain[0]];
+    }
+
+    addRightAxis() {
+        this._rightAxis = new Axis(this, this.yUnitSize);
+        this._rightAxis.start = [this.xDomain[1], this.yDomain[1]];
+        this._rightAxis.end = [this.xDomain[1], this.yDomain[0]];
+    }
+
+    addTopAxis(){
+        this._topAxis = new Axis(this, this.xUnitSize);
+        this._topAxis.start = [this.xDomain[0], this.yDomain[1]];
+        this._topAxis.end = [this.xDomain[1], this.yDomain[1]];
+    }
 
 
+    addBottomAxis(){
+        this._bottomAxis = new Axis(this, this.xUnitSize);
+        this._bottomAxis.start = [this.xDomain[0], this.yDomain[0]];
+        this._bottomAxis.end = [this.xDomain[1], this.yDomain[0]];
+    }
+
+    set landmark(value: [number, number]) {
+        this._landmark = value;
+    }
 
     public addFunction(exp:(x: number) => number): GraphFunction {
         let func = new GraphFunction(this, exp);
         this.element.appendChild(func.element);
         return func;
+    }
 
+    public addMarker(p: Point2D){
+        let marker = new Marker(this);
+        let xy: Point2D = [this.xUnitSize.toPixel(p[0]), this.yUnitSize.toPixel(p[1])];
+        xy = CoordinateHelpers.normalize(this.realLandmark, xy);
+        marker.x = xy[0];
+        marker.y = xy[1];
+        return marker;
     }
 
 
-    set xdomain(value: [number, number]) {
-        this._xdomain = value;
-        if(value[0] >= value[1]){
-            throw new Error("The first value of the xDomain must be lower than the second value")
-        }
-
-        let width = (value[1] - value[0]);
-        width = this.unitSize.toPixel(width);
-        this.setAttribute("width", width);
-        this.rectBorder.setAttribute("width", width.toString());
-        this.width = width;
-        this._origin.x = -value[0];
+    set xDomain(value: [number, number]) {
+        this._xDomain = value;
+        let width = value[1] - value[0];
+        width = this.xUnitSize.toPixel(width);
+        this.width = width + 1;
+        this._origin[0] = 0 - value[0];
 
     }
 
-    set ydomain(value: [number, number]) {
-        this._ydomain = value;
-        if(value[0] >= value[1]){
-            throw new Error("The first value of the yDomain must be lower than the second value")
-        }
-
-        let height = (value[1] - value[0]);
-        height = this.unitSize.toPixel(height);
-        this.setAttribute("height", height);
-        this.rectBorder.setAttribute("height", height.toString());
-        this.height = height;
-        this._origin.y = -value[0];
-        console.log(this._origin)
+    set yDomain(value: [number, number]) {
+        this._yDomain = value;
+        let height = value[1] - value[0];
+        height = this.yUnitSize.toPixel(height);
+        this.height = height + 1;
+        this._origin[1] = 0 - value[0];
     }
-
 
     get figure(): Figure {
         return this._figure;
     }
 
 
-    get xdomain(): [number, number] {
-        return this._xdomain;
-    }
 
-    get ydomain(): [number, number] {
-        return this._ydomain;
-    }
-
-    get origin(): Coordinate2D {
-        return this._origin;
-    }
 
     protected buildSvgElement(): SVGElement {
         return document.createElementNS(SVG_NAMESPACE, "svg");
@@ -122,4 +157,47 @@ export class Graph extends GraphElement<SVGElement>{
     get yUnitSize(): UnitSize {
         return this._yUnitSize;
     }
+
+
+    get landmark(): Point2D {
+        return this._landmark;
+    }
+
+    private get svgLandmark(): Point2D {
+        return CoordinateHelpers.fromBottomRightToOriginal(this.height, this.landmark);
+    }
+
+
+    get realWidth(): number {
+        return this.xUnitSize.toPixel(this._width);
+    }
+
+    get realHeight(): number {
+        return this.yUnitSize.toPixel(this._height);
+    }
+
+    get realLandmark(): Point2D {
+        let lm: Point2D = [this.xUnitSize.toPixel(this._landmark[0]), this.yUnitSize.toPixel(this._landmark[1])];
+
+        return CoordinateHelpers.fromBottomRightToOriginal(this.figure.height, lm);
+    }
+
+
+    get xDomain(): [number, number] {
+        return this._xDomain;
+    }
+
+    get yDomain(): [number, number] {
+        return this._yDomain;
+    }
+
+    get origin(): [number, number] {
+        return this._origin;
+    }
+
+    get realOrigin(): [number, number] {
+        const y = (this.yDomain[1] - this.yDomain[0]) - this.origin[1];
+        return [this.xUnitSize.toPixel(this.origin[0]), this.yUnitSize.toPixel(y)]
+    }
+
 }

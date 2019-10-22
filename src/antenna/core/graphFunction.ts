@@ -1,10 +1,11 @@
-import {GraphElement} from "./graph-element";
-import {Coordinate2D} from "./coordinates";
+import {GraphFillableElement} from "./graph-fillable-element";
+import {Coordinate2D, Point2D} from "./coordinates";
 import {SVG_NAMESPACE} from "./constant";
 import {createPathElement} from "./utils";
 import {Graph} from "./graph";
+import {CoordinateHelpers} from "./coordinate-helpers";
 
-export class GraphFunction extends GraphElement<SVGPathElement> {
+export class GraphFunction extends GraphFillableElement<SVGPathElement> {
     constructor(private graph: Graph, _expression: (x: number) => number, _precision: number = 0.1) {
         super(graph);
         this.expression = _expression;
@@ -17,8 +18,8 @@ export class GraphFunction extends GraphElement<SVGPathElement> {
 
 
     private _expression: (x: number) => number;
-    private _values: Coordinate2D[] = [];
-    private _pathValues: Coordinate2D[] = [];
+    private _values: Point2D[] = [];
+    private _pathValues: Point2D[] = [];
     private _precision: number = 0.1;
 
 
@@ -29,25 +30,27 @@ export class GraphFunction extends GraphElement<SVGPathElement> {
     set expression(value: (x: number) => number) {
         this._expression = value;
         let str = "";
-        for(let i = this.graph.xdomain[0]; i < this.graph.xdomain[1]; i+= this.precision){
+        let start = this.graph.xUnitSize.toPixel(this.graph.xDomain[0]);
+        let end = this.graph.xUnitSize.toPixel(this.graph.xDomain[1]);
+
+        for(let i = start; i < end; i+= this.precision){
             let c = this.addValue(i, this._expression(i));
-            str += ` L ${c.x} ${c.y}`;
+            str += ` L ${c[0]} ${c[1]}`;
         }
-        console.log(this.values)
-        str = `M${this._pathValues[0].x} ${this._pathValues[0].y}` + str;
+
+        str = `M${this._pathValues[0][0]} ${this._pathValues[0][0]}` + str;
         this.setAttribute("d", str);
     }
 
     addValue(x:number, y: number){
-        let coord = {
-            x: this.graph.origin.x +  x ,
-            y: (this.parent.height - this.graph.origin.y) - y/this.graph.yUnitSize.size
-        };
-        this._values.push({x:x, y:y});
+        let coord:Point2D = [this.graph.xUnitSize.toPixel(x), this.graph.yUnitSize.toPixel(y)];
+        coord = CoordinateHelpers.normalize(this.graph.realOrigin, coord);
+
+        this._values.push([x, y]);
         this._pathValues.push(coord);
         return coord;
     }
-    get values(): Coordinate2D[] {
+    get values(): Point2D[] {
         return this._values;
     }
 
@@ -58,6 +61,10 @@ export class GraphFunction extends GraphElement<SVGPathElement> {
 
     set precision(value: number) {
         this._precision = value;
+    }
+
+    set color(value: string){
+        this.setAttribute("stroke", value);
     }
 
 

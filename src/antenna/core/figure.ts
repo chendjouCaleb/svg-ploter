@@ -2,9 +2,9 @@ import {FigureProperty} from "./graph-element-property";
 import {SVG_NAMESPACE} from "./constant";
 import {Graph} from "./graph";
 import {UnitSize} from "./unit-size";
-import {GraphElement} from "./graph-element";
+import {GraphFillableElement} from "./graph-fillable-element";
 
-export class Figure extends GraphElement<SVGElement>{
+export class Figure extends GraphFillableElement<SVGElement>{
     protected buildSvgElement(): SVGElement {
         return document.createElementNS(SVG_NAMESPACE, "svg");
     }

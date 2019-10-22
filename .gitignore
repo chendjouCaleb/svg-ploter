@@ -1,6 +1,8 @@
 #output
 dist/
 
+#ide
+
 # Logs
 logs
 *.log

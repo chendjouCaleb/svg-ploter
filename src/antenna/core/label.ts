@@ -1,4 +1,4 @@
-import { GraphElement } from "./graph-element";
+import { GraphFillableElement } from "./graph-fillable-element";
 
 export class Label{
     x: number;
